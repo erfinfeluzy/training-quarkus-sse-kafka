@@ -39,6 +39,11 @@ Download source code dari repository [GitHub](https://github.com/erfinfeluzy/tra
 > cd training-quarkus-sse-kafka
 > mvn quarkus:dev
 ```
+> Note : Mode ini digunakan menggunakan mode *Development*, untuk menjalankan secara native dapat menggunakan
+```
+> mvn package -Pnative
+```
+
 Struktur code sebagai berikut:
 
 ![code structure](https://github.com/erfinfeluzy/training-quarkus-sse-kafka/blob/master/code-structure.png?raw=true)
@@ -67,8 +72,8 @@ Tambahkan library kafka client pada file pom.xml
 </dependency>
 ```
 > Note:
-> 1. Quarkus menggunkan library dari [Smallrye.io](https://smallrye.io/) sebagai kafka client nya.
-> 2. Komponen Quarkus Scheduler digunakan untuk mensimulasikan traffic ke Kafka Server sebagai topic publisher.
+> 1. Quarkus menggunakan library dari [Smallrye.io](https://smallrye.io/) sebagai kafka client.
+> 2. Komponen *Quarkus Scheduler* digunakan untuk mensimulasikan traffic ke Kafka Server sebagai topic publisher.
 
 ### Konfigurasi Kafka Consumer
 ```properties
@@ -84,74 +89,62 @@ mp.messaging.outgoing.mytopic-publisher.topic=mytopic
 mp.messaging.outgoing.mytopic-publisher.value.serializer=org.apache.kafka.common.serialization.StringSerializer
 ```
 
-### Publish Random message ke Topic Kafka setiap 5 detik
+### Publish Random message ke Kafka Server setiap 5 detik
 
 Snippet berikut pada file *KafkaTopicGenerator.java* untuk mempublish random data ke Topic dengan nama **mytopic**.
 ```java
-@Async
-@Scheduled(fixedRate = 5000)
-public void doNotify() throws IOException {
+	@Inject
+	@Channel("mytopic-publisher")
+	private Emitter<String> emitter;
 
-	//randomly generate kafka message to topic:mytopic every 5 seconds
-	kafkaTemplate.send("mytopic", "Data tanggal : " + new Date () + "; id : " + UUID.randomUUID() );
-}
+	@Scheduled(every = "5s")
+	public void scheduler() {
+		
+		//randomly generate kafka message to topic:mytopic every 5 seconds	
+		emitter.send( "Data tanggal : " + new Date () + "; id : " + UUID.randomUUID() );
+	}
 ```
+> Note:
+> 1. **@Channel("mytopic-publisher")** adalah channel stream internal microprofile. *mytopic-pulisher* dikonfigurasikan pada application.properties untuk diteruskan ke Kafka Server dengan nama topic : *mytopic*.
+> 2. **@Scheduled(every = "5s")** digunakan untuk mensimulasikan traffic data masuk ke Kafka Server setiap 5 detik.
 
 ### Consume Topic Kafka dan teruskan ke Server Send Event emitter.
-Snippet dibawah untuk subscribe ke topic **mytopic**.
+Snippet dibawah untuk subscribe ke topic **mytopic**, kemudian data dari topic diteruskan channel stream internal **my-internal-data-stream**.
 ```java
-@KafkaListener(topics = "mytopic", groupId = "consumer-group-id-1")
-public void listen(@Payload String message, @Header(KafkaHeaders.OFFSET) String offset) {
+    @Incoming("mytopic-subscriber")
+    @Outgoing("my-internal-data-stream")
+    @Broadcast
+    public String process(Message<String> incoming) {
+    	
+    	Long offset = getOffset(incoming);
+    	
+    	return "Kafka Offset=" + offset + "; message=" + incoming.getPayload();
+    
+    }
+```
+> Note:
+> 1. **@Incoming("mytopic-subscriber")** : listen ke Kafka topic **mytopic** yang sudah dikonfigurasikan di application.properties
+> 2. **@Outgoing("my-internal-data-stream") dan **@Broadcast** : message kafka yang diterima, diproses dengan menambahkan atribut offset number pada Kafka message, lalu diteruskan ke streaming endpoint via anotasi MicroProfile @Outgoing dan @Broadcast.
 
-	//process incoming message from kafka
-	doNotify("Kafka Offset=" + offset + "; message=" + message);	
-}
-```
-Kemudian data dari topic di teruskan ke SSE emitter.
-```java
-private void doNotify(String message) {
-	List<SseEmitter> deadEmitters = new ArrayList<>();
-		
-	emitters.forEach(emitter -> {
-		try {
-			//send message to frontend
-			emitter
-				.send(SseEmitter.event()
-					.data(message));
-				
-		} catch (Exception e) {
-			deadEmitters.add(emitter);
-		}
-	});
-	
-	emitters.removeAll(deadEmitters);
-}
-```
+
 ### Create Controller untuk melakukan stream SSE
 Snippet berikut untuk melakukan stream data via http dengan menggunakan SSE pada endpoint **/stream**.
 ```java
-@RestController
-public class StreamController {
-	
-	@Autowired
-	KafkaConsumer kafkaConsumer;
+	@Inject
+	@Channel("my-internal-data-stream")
+	Publisher<String> myDataStream;
 
-	@GetMapping("/stream")
-	SseEmitter  stream() throws IOException {
+	@GET
+	@Path("/stream")
+	@Produces(MediaType.SERVER_SENT_EVENTS)
+	@SseElementType("text/plain")
+	public Publisher<String> stream() {
 
-		final SseEmitter emitter = new SseEmitter();
-		kafkaConsumer.addEmitter(emitter);
-		
-		emitter.onCompletion(() -> kafkaConsumer.removeEmitter(emitter));
-		emitter.onTimeout(() -> kafkaConsumer.removeEmitter(emitter));
-		
-		return emitter;
-
+		return myDataStream;
 	}
 
-}
 ```
-Hasil dapat dicek dengan menggunakan perintah curl
+Hasil dapat dilihat dengan menggunakan perintah curl:
 ```bash
 > curl http://localhost:8080/stream
 ```
@@ -184,14 +177,4 @@ window.onload = initialize;
 Kamu dapat memcoba dengan menggunakan browser pada url berikut [http://localhost:8080](http://localhost:8080).
 
 ## Bonus! Deploy aplikasi kamu ke Red Hat Openshift
-Deploy aplikasi kamu dengan mudah menggunakan fitur Source to Image (s2i) pada OpenShift.
-> Note: install CodeReady Container (crc) untuk lebih mudah.
-```
-> oc login
-> oc new-project my-project
-> oc new-app redhat-openjdk18-openshift~https://github.com/erfinfeluzy/training-spring-sse-kafka.git 
-> oc expose svc/training-spring-sse-kafka
-> oc get route
-```
-
-hasil dari perintah *oc get route* barupa url yang dapat dibuka di browser anda.
+Deploy aplikasi kamu secara native dan secure diatas [Red Hat OpenShift](https://www.openshift.com/) dan [Red Hat Secured Registry Quay.io](https://quay.io) pada tutorial saya [https://github.com/erfinfeluzy/quarkus-demo](https://github.com/erfinfeluzy/quarkus-demo)
