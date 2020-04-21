@@ -174,7 +174,7 @@ window.onload = initialize;
 ```
 
 ## Voila! Kamu sudah berhasil
-Kamu dapat memcoba dengan menggunakan browser pada url berikut [http://localhost:8080](http://localhost:8080).
+Coba di browser pada url berikut [http://localhost:8080](http://localhost:8080).
 
 ## Bonus! Deploy aplikasi kamu ke Red Hat Openshift
-Deploy aplikasi kamu secara native dan secure diatas [Red Hat OpenShift](https://www.openshift.com/) dan [Red Hat Secured Registry Quay.io](https://quay.io) pada tutorial saya [https://github.com/erfinfeluzy/quarkus-demo](https://github.com/erfinfeluzy/quarkus-demo)
+Deploy aplikasi kamu secara native dan secure diatas [Red Hat OpenShift](https://www.openshift.com/) dan [Red Hat Secured Registry Quay.io](https://quay.io) pada tutorial saya [https://github.com/erfinfeluzy/quarkus-demo](https://github.com/erfinfeluzy/quarkus-demo).
