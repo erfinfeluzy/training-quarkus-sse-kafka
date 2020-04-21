@@ -3,7 +3,7 @@
 Tutorial ini akan melakukan hands on mengenai cara stream Kafka ke HTML dengan menggunakan metode Server Send Event (SSE).
 Kelebihan SSE dibandingkan dengan menggunakan Web Socket (ws://) adalah SSE menggunakan protokol http(s) dan satu arah, hanya dari server ke client saja.
 
-[Quarkus.io](quarkus.io) adalah framework Kubernetes-Native Java yang dirancang khusus untuk Java Virtual Machine (JVM) seperti GraalVM dan HotSpot. Disponsori oleh Red Hat, Quarkus mengoptimalkan Java secara khusus untuk Kubernetes dengan mengurangi ukuran aplikasi Java, ukuran *image container*, dan jumlah memori yang diperlukan untuk menjalankan *image* tersebut.
+[Quarkus.io](quarkus.io) adalah framework Kubernetes-Native Java yang dirancang khusus untuk Java Virtual Machine (JVM) seperti GraalVM dan HotSpot. Disponsori oleh [Red Hat](redhat.com), Quarkus mengoptimalkan Java secara khusus untuk Kubernetes dengan mengurangi ukuran aplikasi Java, ukuran *image container*, dan jumlah memori yang diperlukan untuk menjalankan *image* tersebut.
 
 Prerequsite tutorial ini adalah:
 - Java 8 
