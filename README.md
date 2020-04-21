@@ -39,11 +39,11 @@ Download source code dari repository [GitHub](https://github.com/erfinfeluzy/tra
 > cd training-quarkus-sse-kafka
 > mvn quarkus:dev
 ```
-Struktur code sebagai berikut:\
+Struktur code sebagai berikut:
 
 ![code structure](https://github.com/erfinfeluzy/training-quarkus-sse-kafka/blob/master/code-structure.png?raw=true)
 
-Buka browser dengan url [http://localhost:8080](http://localhost:8080). akan terlihat halaman sbb:\
+Buka browser dengan url [http://localhost:8080](http://localhost:8080). akan terlihat halaman sbb:
 
 ![code structure](https://github.com/erfinfeluzy/training-spring-sse-kafka/blob/master/result-on-browser.png?raw=true)
 
@@ -55,60 +55,33 @@ Buka browser dengan url [http://localhost:8080](http://localhost:8080). akan ter
 Tambahkan library kafka client pada file pom.xml
 ```xml
 <dependency>
-	<groupId>org.springframework.kafka</groupId>
-	<artifactId>spring-kafka</artifactId>
+	<groupId>io.quarkus</groupId>
+	<artifactId>quarkus-smallrye-reactive-messaging-kafka</artifactId>
+</dependency>
+
+...
+
+<dependency>
+	<groupId>io.quarkus</groupId>
+	<artifactId>quarkus-scheduler</artifactId>
 </dependency>
 ```
+> Note:
+> 1. Quarkus menggunkan library dari [Smallrye.io](https://smallrye.io/) sebagai kafka client nya.
+> 2. Komponen Quarkus Scheduler digunakan untuk mensimulasikan traffic ke Kafka Server sebagai topic publisher.
 
 ### Konfigurasi Kafka Consumer
-```java
-@EnableKafka
-@Configuration
-public class KafkaConsumerConfig {
-
-	@Bean
-	public ConsumerFactory<String, String> consumerFactory() {
-		Map<String, Object> props = new HashMap<>();
-		
-		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-		props.put(ConsumerConfig.GROUP_ID_CONFIG, "group-id");
-		props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-		
-		return new DefaultKafkaConsumerFactory<>(props);
-	}
-
-	@Bean
-	public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
-		
-		ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
-		
-		factory.setConsumerFactory(consumerFactory());
-		
-		return factory;
-	}
-
-}
+```properties
+# Configure the Kafka source (we read from it)
+mp.messaging.incoming.mytopic-subscriber.connector=smallrye-kafka
+mp.messaging.incoming.mytopic-subscriber.topic=mytopic
+mp.messaging.incoming.mytopic-subscriber.value.deserializer=org.apache.kafka.common.serialization.StringDeserializer
 ```
 ### Konfigurasi Kafka Producer
-```java
-@Configuration
-public class KafkaProducerConfig {
-
-	@Bean
-	public ProducerFactory<String, String> producerFactory() {
-		Map<String, Object> configProps = new HashMap<>();
-		configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-		configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-		configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-		return new DefaultKafkaProducerFactory<>(configProps);
-	}
-
-	@Bean
-	public KafkaTemplate<String, String> kafkaTemplate() {
-		return new KafkaTemplate<>(producerFactory());
-	}
-}
+```properties
+mp.messaging.outgoing.mytopic-publisher.connector=smallrye-kafka
+mp.messaging.outgoing.mytopic-publisher.topic=mytopic
+mp.messaging.outgoing.mytopic-publisher.value.serializer=org.apache.kafka.common.serialization.StringSerializer
 ```
 
 ### Publish Random message ke Topic Kafka setiap 5 detik
